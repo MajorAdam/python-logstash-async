@@ -227,9 +227,9 @@ class LogProcessingWorker(Thread):  # pylint: disable=too-many-instance-attribut
                     exc=exc)
                 self._database.requeue_queued_events(queued_events)
                 break
-            else:
+            finally:
                 self._delete_queued_events_from_database()
-                self._reset_flush_counters()
+                self._reset_flush_counters(len(queued_events))
 
     # ----------------------------------------------------------------------
     def _fetch_queued_events_for_flush(self):
