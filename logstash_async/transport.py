@@ -103,8 +103,9 @@ class UdpTransport:
 
     # ----------------------------------------------------------------------
     def _send(self, events):
-        for event in events:
-            self._send_via_socket(event)
+        for key, event in events.items():
+            self._send_via_socket(event['event_text'])
+            del events[key]
 
     # ----------------------------------------------------------------------
     def _send_via_socket(self, data):

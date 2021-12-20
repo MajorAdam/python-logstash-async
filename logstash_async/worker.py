@@ -210,8 +210,7 @@ class LogProcessingWorker(Thread):  # pylint: disable=too-many-instance-attribut
                 break
 
             try:
-                events = [event['event_text'] for event in queued_events]
-                self._send_events(events)
+                self._send_events(queued_events)
             # exception types for which we do not want a stack trace
             except (ConnectionError, TimeoutError, socket_gaierror) as exc:
                 self._safe_log(
