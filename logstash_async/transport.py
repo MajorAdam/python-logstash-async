@@ -3,19 +3,18 @@
 # This software may be modified and distributed under the terms
 # of the MIT license.  See the LICENSE file for details.
 
-from abc import ABC, abstractmethod
-from typing import Iterator, Union
 import json
 import logging
 import socket
 import ssl
+from abc import ABC, abstractmethod
+from typing import Iterator, Union
 
-from requests.auth import HTTPBasicAuth
 import pylogbeat
 import requests
+from requests.auth import HTTPBasicAuth
 
 from logstash_async.utils import ichunked
-
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +68,6 @@ class Transport(ABC):
 
 
 class UdpTransport:
-
     _keep_connection = False
 
     # ----------------------------------------------------------------------
@@ -79,6 +77,7 @@ class UdpTransport:
         self._port = port
         self._timeout = timeout
         self._sock = None
+        self.batch_send_count = 0
 
     # ----------------------------------------------------------------------
     def send(self, events, use_logging=False):  # pylint: disable=unused-argument
@@ -103,9 +102,10 @@ class UdpTransport:
 
     # ----------------------------------------------------------------------
     def _send(self, events):
-        for key, event in events.items():
-            self._send_via_socket(event['event_text'])
-            del events[key]
+        self.batch_send_count = 0
+        for event in events:
+            self._send_via_socket(event)
+            self.batch_send_count += 1
 
     # ----------------------------------------------------------------------
     def _send_via_socket(self, data):
@@ -192,7 +192,6 @@ class TcpTransport(UdpTransport):
 
 
 class BeatsTransport:
-
     _batch_size = 10
 
     # ----------------------------------------------------------------------

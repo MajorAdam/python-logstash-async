@@ -86,9 +86,9 @@ class LogProcessingWorker(Thread):  # pylint: disable=too-many-instance-attribut
         self._flush_event.set()
 
     # ----------------------------------------------------------------------
-    def _reset_flush_counters(self):
+    def _reset_flush_counters(self, count=0):
         self._last_event_flush_date = datetime.now()
-        self._non_flushed_event_count = 0
+        self._non_flushed_event_count = count
 
     # ----------------------------------------------------------------------
     def _clear_flush_event(self):
@@ -210,14 +210,15 @@ class LogProcessingWorker(Thread):  # pylint: disable=too-many-instance-attribut
                 break
 
             try:
-                self._send_events(queued_events)
+                events = [event['event_text'] for event in queued_events]
+                self._send_events(events)
             # exception types for which we do not want a stack trace
             except (ConnectionError, TimeoutError, socket_gaierror) as exc:
                 self._safe_log(
                     'error',
                     'An error occurred while sending events: %s',
                     exc)
-                self._database.requeue_queued_events(queued_events)
+                self._database.requeue_queued_events(queued_events[self._transport.batch_send_count:])
                 break
             except Exception as exc:
                 self._safe_log(
@@ -225,11 +226,11 @@ class LogProcessingWorker(Thread):  # pylint: disable=too-many-instance-attribut
                     'An error occurred while sending events: %s',
                     exc,
                     exc=exc)
-                self._database.requeue_queued_events(queued_events)
+                self._database.requeue_queued_events(queued_events[self._transport.batch_send_count:])
                 break
             finally:
                 self._delete_queued_events_from_database()
-                self._reset_flush_counters(len(queued_events))
+                self._reset_flush_counters(len(queued_events) - self._transport.batch_send_count)
 
     # ----------------------------------------------------------------------
     def _fetch_queued_events_for_flush(self):
